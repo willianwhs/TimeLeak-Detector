@@ -1,1 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeLeak Detector</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b1329">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-main: #0b1329;
+            --bg-card: #1c2541;
+            --primary-accent: #48cae4;
+            --success: #06d6a0;
+            --alert: #ffd166;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+            color: var(--primary-accent);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        /* Telas de Onboarding / Fluxo Inicial */
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        input, select {
+            width: 100%;
+            padding: 14px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-accent);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-accent);
+            color: #0b1329;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:active { background-color: #00b4d8; }
+
+        /* Grid de botões de rastreamento */
+        .grid-tracker {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-track {
+            background-color: #2a3454;
+            color: white;
+            border: none;
+            padding: 18px 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-track:active { background-color: #3b4875; }
+
+        .assistant-box {
+            background-color: #131b33;
+            border-left: 4px solid var(--success);
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #cbd5e1;
+            margin-top: 10px;
+        }
+
+        /* Paywall Dinâmico */
+        .paywall-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(11, 19, 41, 0.98);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 25px;
+        }
+
+        .paywall-content {
+            background-color: var(--bg-card);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid var(--primary-accent);
+            max-width: 380px;
+        }
+
+        .paywall-content h2 { color: var(--alert); margin-bottom: 10px; }
+        .paywall-content p { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+
+        .btn-pay {
+            background-color: var(--success);
+            color: #0b1329;
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>⏳ TimeLeak Detector</h1>
+            <p>Sua rotina protegida, seus objetivos alcançados</p>
+        </header>
+
+        <div id="screen-auth" class="card screen active">
+            <h2>Bem-vindo ao seu Assistente de Tempo</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">
+                Para assegurar sua identidade, sincronizar seus dados e permitir acessos futuros, digite seu contato:
+            </p>
+            <input type="tel" id="user-phone" placeholder="(DDD) 99999-9999" required>
+            <button class="btn-primary" onclick="submitAuth()">Iniciar Diagnóstico</button>
+        </div>
+
+        <div id="screen-quiz" class="card screen">
+            <h2>Defina o seu Objetivo Principal</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Para onde o tempo recuperado deve ir?</p>
+            <select id="user-goal">
+                <option value="Trabalho/Ganhar Dinheiro">Trabalho / Projetos que geram renda</option>
+                <option value="Estudos/Faculdade">Estudos / Evolução Acadêmica</option>
+                <option value="Família e Lazer">Ficar com a Família / Descanso Real</option>
+                <option value="Saúde e Esportes">Cuidar da Saúde / Praticar Esportes</option>
+            </select>
+            <button class="btn-primary" onclick="submitQuiz()">Configurar Assistente</button>
+        </div>
+
+        <div id="screen-dashboard" class="screen">
+            <div class="card">
+                <h2>Onde você gastou as últimas 2 horas?</h2>
+                <div class="grid-tracker">
+                    <button class="btn-track" onclick="trackActivity('Distrações', 2)">📱 Redes / Feed</button>
+                    <button class="btn-track" onclick="trackActivity('Foco', 2)">💼 Trabalho Focado</button>
+                    <button class="btn-track" onclick="trackActivity('Vazio', 2)">📺 Procrastinação</button>
+                    <button class="btn-track" onclick="trackActivity('Descanso', 2)">🧘 Descanso / Família</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🤖 Assistente Pessoal de Tempo</h2>
+                <div class="assistant-box" id="assistant-speech">
+                    Analisando seu padrão de entrada... Conte-me o que fez para começarmos a agir.
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Sua Alocação Atual</h2>
+                <canvas id="analyticsChart" style="max-height: 200px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="paywall-overlay" id="premium-lock">
+        <div class="paywall-content">
+            <h2>Vazamentos Detectados!</h2>
+            <p>O sistema identificou falhas graves na sua gestão que estão sabotando o seu objetivo de focar em: <span id="target-goal" style="color: var(--primary-accent); font-weight: bold;"></span>.</p>
+            <p>Ative seu Assistente Vitalício de Correção para obter planos semanais personalizados e relatórios analíticos de precisão.</p>
+            <div style="font-size: 1.6rem; color: var(--success); font-weight: bold; margin-bottom: 20px;">R$ 5,99 / mês</div>
+            <button class="btn-pay" onclick="triggerPayment()">Desbloquear Acesso Completo</button>
+        </div>
+    </div>
+
+    <script>
+        // Inicialização de Variáveis Dinâmicas
+        let db = { phone: '', goal: '', clicks: 0, tracking: { Distrações: 0, Foco: 0, Vazio: 0, Descanso: 0 } };
+        let chartInstance;
+
+        // Recuperar dados caso o usuário reabra a aplicação
+        window.onload = function() {
+            const savedData = localStorage.getItem('timeleak_user_data');
+            if(savedData) {
+                db = JSON.parse(savedData);
+                if(db.phone && db.goal) {
+                    showScreen('screen-dashboard');
+                    initChart();
+                    evaluateHabits();
+                }
+            }
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function submitAuth() {
+            const phone = document.getElementById('user-phone').value;
+            if(!phone || phone.length < 8) return alert('Por favor, informe um contato válido.');
+            db.phone = phone;
+            saveLocal();
+            showScreen('screen-quiz');
+        }
+
+        function submitQuiz() {
+            db.goal = document.getElementById('user-goal').value;
+            saveLocal();
+            showScreen('screen-dashboard');
+            initChart();
+            evaluateHabits();
+        }
+
+        function saveLocal() {
+            localStorage.setItem('timeleak_user_data', JSON.stringify(db));
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Distrações', 'Trabalho Focado', 'Procrastinação', 'Descanso Real'],
+                    datasets: [{
+                        data: [db.tracking.Distrações, db.tracking.Foco, db.tracking.Vazio, db.tracking.Descanso],
+                        backgroundColor: ['#e63946', '#06d6a0', '#ffd166', '#48cae4'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { plugins: { legend: { labels: { color: '#f8fafc' } } } }
+            });
+        }
+
+        function trackActivity(type, hours) {
+            db.clicks++;
+            db.tracking[type] += hours;
+            saveLocal();
+
+            // Atualiza Gráfico
+            chartInstance.data.datasets[0].data = [db.tracking.Distrações, db.tracking.Foco, db.tracking.Vazio, db.tracking.Descanso];
+            chartInstance.update();
+
+            evaluateHabits();
+
+            // Ativação da barreira de cobrança estruturada após 3 interações
+            if(db.clicks >= 3) {
+                document.getElementById('target-goal').innerText = db.goal;
+                document.getElementById('premium-lock').style.display = 'flex';
+            }
+        }
+
+        // Lógica de Inteligência do Assistente (Memória Local Baseada na Dor Informada)
+        function evaluateHabits() {
+            const box = document.getElementById('assistant-speech');
+            let totalPerdas = db.tracking.Distrações + db.tracking.Vazio;
+            
+            if(totalPerdas === 0) {
+                box.innerText = `Olá! Percebi que você quer focar mais em seu plano de "${db.goal}". Vamos catalogar suas primeiras horas para mapear o diagnóstico exato.`;
+            } else {
+                box.innerText = `Análise crítica: Você já acumulou ${totalPerdas}h de fuga nesta amostragem. Esse comportamento afasta você diretamente do seu foco em "${db.goal}". Recomendo atenção imediata nos próximos blocos.`;
+            }
+        }
+
+        function triggerPayment() {
+            // Integração futura do Link de Checkout / API Pix Copia e Cola
+            alert('Redirecionando para o ambiente de pagamento seguro de R$ 5,99 da aplicação.');
+        }
+
+        // Registro Automático do Service Worker PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+  </html>
+                  
