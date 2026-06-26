@@ -3,343 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimeLeak Detector</title>
+    <title>TimeLeak - Mental Analytics</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0b1329">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="theme-color" content="#090d16">
     <style>
         :root {
-            --bg-main: #0b1329;
-            --bg-card: #1c2541;
-            --primary-accent: #48cae4;
-            --success: #06d6a0;
-            --alert: #ffd166;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            --bg-base: #090d16;
+            --bg-surface: #111827;
+            --bg-input: #1f2937;
+            --accent: #38bdf8;
+            --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+            --text-white: #f8fafc;
+            --text-gray: #94a3b8;
+            --emerald: #10b981;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-base); color: var(--text-white); display: flex; justify-content: center; min-height: 100vh; padding: 15px; }
+        
+        .app-wrapper { width: 100%; max-width: 420px; display: flex; flex-direction: column; justify-content: center; }
+        
+        .brand-header { text-align: center; margin-bottom: 30px; }
+        .brand-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .brand-header p { font-size: 0.85rem; color: var(--text-gray); margin-top: 4px; }
 
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-        }
+        .glass-card { background: var(--bg-surface); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        
+        .step { display: none; }
+        .step.active { display: block; }
 
-        .app-container {
-            width: 100%;
-            max-width: 440px;
-            display: flex;
-            flex-direction: column;
-        }
+        h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
+        .step-desc { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 20px; line-height: 1.5; }
 
-        header {
-            text-align: center;
-            margin-bottom: 25px;
-        }
+        label { display: block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-gray); margin-bottom: 8px; }
+        input, select { width: 100%; padding: 14px; background: var(--bg-input); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 0.95rem; margin-bottom: 18px; transition: all 0.2s; }
+        input:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
 
-        header h1 {
-            font-size: 1.6rem;
-            color: var(--primary-accent);
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
+        .progress-bar { height: 4px; width: 100%; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 25px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 25%; background: var(--accent); transition: width 0.3s ease; }
 
-        header p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
+        .btn-action { background: var(--accent-gradient); color: white; border: none; padding: 15px; width: 100%; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3); transition: all 0.2s; }
+        .btn-action:active { transform: scale(0.98); }
 
-        .card {
-            background-color: var(--bg-card);
-            border-radius: 16px;
-            padding: 22px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+        /* Estilos do Diagnóstico Final */
+        .metric-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
+        .metric-val { font-size: 1.8rem; font-weight: 800; color: #ef4444; margin-top: 5px; }
+        .metric-val.green { color: var(--emerald); }
 
-        .card h2 {
-            font-size: 1.1rem;
-            margin-bottom: 12px;
-            color: var(--text-main);
-        }
-
-        /* Telas de Onboarding / Fluxo Inicial */
-        .screen { display: none; }
-        .screen.active { display: block; }
-
-        input, select {
-            width: 100%;
-            padding: 14px;
-            background-color: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            margin-bottom: 15px;
-            outline: none;
-        }
-
-        input:focus, select:focus {
-            border-color: var(--primary-accent);
-        }
-
-        .btn-primary {
-            background-color: var(--primary-accent);
-            color: #0b1329;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
-        }
-
-        .btn-primary:active { background-color: #00b4d8; }
-
-        /* Grid de botões de rastreamento */
-        .grid-tracker {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .btn-track {
-            background-color: #2a3454;
-            color: white;
-            border: none;
-            padding: 18px 10px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-track:active { background-color: #3b4875; }
-
-        .assistant-box {
-            background-color: #131b33;
-            border-left: 4px solid var(--success);
-            padding: 12px;
-            border-radius: 0 8px 8px 0;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            color: #cbd5e1;
-            margin-top: 10px;
-        }
-
-        /* Paywall Dinâmico */
-        .paywall-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(11, 19, 41, 0.98);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            padding: 25px;
-        }
-
-        .paywall-content {
-            background-color: var(--bg-card);
-            padding: 30px;
-            border-radius: 20px;
-            text-align: center;
-            border: 1px solid var(--primary-accent);
-            max-width: 380px;
-        }
-
-        .paywall-content h2 { color: var(--alert); margin-bottom: 10px; }
-        .paywall-content p { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
-
-        .btn-pay {
-            background-color: var(--success);
-            color: #0b1329;
-            font-size: 1.1rem;
-            font-weight: bold;
-            padding: 15px;
-            border-radius: 10px;
-            border: none;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3);
-        }
+        /* Modal do Pix */
+        .pix-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(9, 13, 22, 0.95); z-index: 100; justify-content: center; align-items: center; padding: 20px; }
+        .pix-container { background: var(--bg-surface); border: 1px solid var(--accent); padding: 25px; border-radius: 24px; text-align: center; width: 100%; max-width: 360px; }
+        .qr-mock { width: 180px; height: 180px; background: white; margin: 20px auto; display: flex; justify-content: center; align-items: center; border-radius: 12px; padding: 10px; }
+        .qr-mock img { width: 100%; height: 100%; }
+        .recipient-tag { background: var(--bg-input); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; color: var(--emerald); font-weight: bold; margin-bottom: 15px; display: inline-block; }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <header>
-            <h1>⏳ TimeLeak Detector</h1>
-            <p>Sua rotina protegida, seus objetivos alcançados</p>
+    <div class="app-wrapper">
+        <header class="brand-header">
+            <h1>TIMELEAK ANALYTICS</h1>
+            <p>Sistemas Avançados de Gestão Pessoal</p>
         </header>
 
-        <div id="screen-auth" class="card screen active">
-            <h2>Bem-vindo ao seu Assistente de Tempo</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">
-                Para assegurar sua identidade, sincronizar seus dados e permitir acessos futuros, digite seu contato:
-            </p>
-            <input type="tel" id="user-phone" placeholder="(DDD) 99999-9999" required>
-            <button class="btn-primary" onclick="submitAuth()">Iniciar Diagnóstico</button>
-        </div>
+        <div class="glass-card">
+            <div class="progress-bar"><div class="progress-fill" id="p-bar"></div></div>
 
-        <div id="screen-quiz" class="card screen">
-            <h2>Defina o seu Objetivo Principal</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Para onde o tempo recuperado deve ir?</p>
-            <select id="user-goal">
-                <option value="Trabalho/Ganhar Dinheiro">Trabalho / Projetos que geram renda</option>
-                <option value="Estudos/Faculdade">Estudos / Evolução Acadêmica</option>
-                <option value="Família e Lazer">Ficar com a Família / Descanso Real</option>
-                <option value="Saúde e Esportes">Cuidar da Saúde / Praticar Esportes</option>
-            </select>
-            <button class="btn-primary" onclick="submitQuiz()">Configurar Assistente</button>
-        </div>
-
-        <div id="screen-dashboard" class="screen">
-            <div class="card">
-                <h2>Onde você gastou as últimas 2 horas?</h2>
-                <div class="grid-tracker">
-                    <button class="btn-track" onclick="trackActivity('Distrações', 2)">📱 Redes / Feed</button>
-                    <button class="btn-track" onclick="trackActivity('Foco', 2)">💼 Trabalho Focado</button>
-                    <button class="btn-track" onclick="trackActivity('Vazio', 2)">📺 Procrastinação</button>
-                    <button class="btn-track" onclick="trackActivity('Descanso', 2)">🧘 Descanso / Família</button>
-                </div>
+            <div class="step active" id="step-1">
+                <h2>Identificação Unificada</h2>
+                <p class="step-desc">Insira seu contato para criar uma assinatura local de dados. Suas informações são protegidas por criptografia de ponta e vinculadas ao aparelho atual.</p>
+                
+                <label>Seu número de celular</label>
+                <input type="tel" id="user-phone" placeholder="(DDD) 99999-9999">
+                
+                <button class="btn-action" onclick="goToStep(2, 50)">Validar Dispositivo</button>
             </div>
 
-            <div class="card">
-                <h2>🤖 Assistente Pessoal de Tempo</h2>
-                <div class="assistant-box" id="assistant-speech">
-                    Analisando seu padrão de entrada... Conte-me o que fez para começarmos a agir.
-                </div>
+            <div class="step" id="step-2">
+                <h2>O Alvo Inicial</h2>
+                <p class="step-desc">Se o seu dia ganhasse magicamente 4 horas extras livres hoje, onde exatamente você aplicaria essa energia para mudar sua vida?</p>
+                
+                <label>Seu maior objetivo atual</label>
+                <select id="user-dream">
+                    <option value="Acelerar minha evolução acadêmica / Faculdade">Concluir meus Estudos / Faculdade</option>
+                    <option value="Construir novos negócios / Ganhar mais dinheiro">Criar um projeto próprio / Ganhar mais dinheiro</option>
+                    <option value="Dar atenção real para minha família / Lazer">Mais tempo com a Família e Lazer real</option>
+                </select>
+                
+                <button class="btn-action" onclick="goToStep(3, 75)">Mapear Rotina</button>
             </div>
 
-            <div class="card">
-                <h2>Sua Alocação Atual</h2>
-                <canvas id="analyticsChart" style="max-height: 200px;"></canvas>
+            <div class="step" id="step-3">
+                <h2>Rastreamento de Fugas</h2>
+                <p class="step-desc">Seja brutalmente sincero. Quantas horas por dia você perde em telas (redes sociais, vídeos, feeds, notificações inúteis)?</p>
+                
+                <label>Estimativa de perda diária</label>
+                <select id="user-leaks">
+                    <option value="2">Cerca de 2 horas por dia</option>
+                    <option value="4">Aproximadamente 4 horas por dia</option>
+                    <option value="6">Mais de 6 horas por dia de forma inconsciente</option>
+                </select>
+                
+                <button class="btn-action" onclick="generateDiagnostic()">Processar Diagnóstico</button>
+            </div>
+
+            <div class="step" id="step-4">
+                <h2>Diagnóstico Concluído</h2>
+                <p class="step-desc" id="diag-intro"></p>
+                
+                <div class="metric-box">
+                    <span style="font-size: 0.8rem; color: var(--text-gray);">Tempo desperdiçado por ano:</span>
+                    <div class="metric-val" id="val-year">000 horas</div>
+                </div>
+
+                <div class="metric-box">
+                    <span style="font-size: 0.8rem; color: var(--text-gray);">Impacto direto no seu objetivo:</span>
+                    <p id="diag-impact" style="font-size: 0.9rem; margin-top: 6px; line-height: 1.4;"></p>
+                </div>
+
+                <p class="step-desc" style="text-align: center; font-weight: 500; color: white;">Para estancar esse vazamento e liberar o assistente de bloqueio diário ativo:</p>
+                <button class="btn-action" onclick="openPixModal()">Ativar Assistente por R$ 5,99</button>
             </div>
         </div>
     </div>
 
-    <div class="paywall-overlay" id="premium-lock">
-        <div class="paywall-content">
-            <h2>Vazamentos Detectados!</h2>
-            <p>O sistema identificou falhas graves na sua gestão que estão sabotando o seu objetivo de focar em: <span id="target-goal" style="color: var(--primary-accent); font-weight: bold;"></span>.</p>
-            <p>Ative seu Assistente Vitalício de Correção para obter planos semanais personalizados e relatórios analíticos de precisão.</p>
-            <div style="font-size: 1.6rem; color: var(--success); font-weight: bold; margin-bottom: 20px;">R$ 5,99 / mês</div>
-            <button class="btn-pay" onclick="triggerPayment()">Desbloquear Acesso Completo</button>
+    <div class="pix-modal" id="payment-modal">
+        <div class="pix-container">
+            <h3 style="margin-bottom: 5px;">Assinatura Mensal Ativa</h3>
+            <p style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 15px;">Escaneie o código abaixo para liberar o sistema</p>
+            
+            <div class="recipient-tag">ℹ️ Recebedor: Ajuda Aí / TimeLeak</div>
+            
+            <div class="qr-mock">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=00020101021126400014br.gov.bcb.pix0118ajudaaitempoleak599" alt="Pix QR Code">
+            </div>
+
+            <div style="font-size: 1.3rem; font-weight: bold; color: var(--accent); margin-bottom: 20px;">R$ 5,99</div>
+            
+            <button class="btn-action" style="background: var(--bg-input); margin-bottom: 10px;" onclick="navigator.clipboard.writeText('00020101021126400014br.gov.bcb.pix0118ajudaaitempoleak599'); alert('Código Copia e Cola copiado!');">Copiar Código Pix</button>
+            <button class="btn-action" style="background: transparent; color: var(--text-gray); box-shadow: none;" onclick="closePixModal()">Cancelar</button>
         </div>
     </div>
 
     <script>
-        // Inicialização de Variáveis Dinâmicas
-        let db = { phone: '', goal: '', clicks: 0, tracking: { Distrações: 0, Foco: 0, Vazio: 0, Descanso: 0 } };
-        let chartInstance;
+        let payload = { phone: '', dream: '', leaks: 0 };
 
-        // Recuperar dados caso o usuário reabra a aplicação
-        window.onload = function() {
-            const savedData = localStorage.getItem('timeleak_user_data');
-            if(savedData) {
-                db = JSON.parse(savedData);
-                if(db.phone && db.goal) {
-                    showScreen('screen-dashboard');
-                    initChart();
-                    evaluateHabits();
-                }
+        function goToStep(stepNum, progressPercent) {
+            if(stepNum === 2) {
+                const phone = document.getElementById('user-phone').value;
+                if(!phone || phone.length < 9) { alert('Digite um telefone válido.'); return; }
+                payload.phone = phone;
             }
-        }
-
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
-        function submitAuth() {
-            const phone = document.getElementById('user-phone').value;
-            if(!phone || phone.length < 8) return alert('Por favor, informe um contato válido.');
-            db.phone = phone;
-            saveLocal();
-            showScreen('screen-quiz');
-        }
-
-        function submitQuiz() {
-            db.goal = document.getElementById('user-goal').value;
-            saveLocal();
-            showScreen('screen-dashboard');
-            initChart();
-            evaluateHabits();
-        }
-
-        function saveLocal() {
-            localStorage.setItem('timeleak_user_data', JSON.stringify(db));
-        }
-
-        function initChart() {
-            const ctx = document.getElementById('analyticsChart').getContext('2d');
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Distrações', 'Trabalho Focado', 'Procrastinação', 'Descanso Real'],
-                    datasets: [{
-                        data: [db.tracking.Distrações, db.tracking.Foco, db.tracking.Vazio, db.tracking.Descanso],
-                        backgroundColor: ['#e63946', '#06d6a0', '#ffd166', '#48cae4'],
-                        borderWidth: 0
-                    }]
-                },
-                options: { plugins: { legend: { labels: { color: '#f8fafc' } } } }
-            });
-        }
-
-        function trackActivity(type, hours) {
-            db.clicks++;
-            db.tracking[type] += hours;
-            saveLocal();
-
-            // Atualiza Gráfico
-            chartInstance.data.datasets[0].data = [db.tracking.Distrações, db.tracking.Foco, db.tracking.Vazio, db.tracking.Descanso];
-            chartInstance.update();
-
-            evaluateHabits();
-
-            // Ativação da barreira de cobrança estruturada após 3 interações
-            if(db.clicks >= 3) {
-                document.getElementById('target-goal').innerText = db.goal;
-                document.getElementById('premium-lock').style.display = 'flex';
-            }
-        }
-
-        // Lógica de Inteligência do Assistente (Memória Local Baseada na Dor Informada)
-        function evaluateHabits() {
-            const box = document.getElementById('assistant-speech');
-            let totalPerdas = db.tracking.Distrações + db.tracking.Vazio;
             
-            if(totalPerdas === 0) {
-                box.innerText = `Olá! Percebi que você quer focar mais em seu plano de "${db.goal}". Vamos catalogar suas primeiras horas para mapear o diagnóstico exato.`;
-            } else {
-                box.innerText = `Análise crítica: Você já acumulou ${totalPerdas}h de fuga nesta amostragem. Esse comportamento afasta você diretamente do seu foco em "${db.goal}". Recomendo atenção imediata nos próximos blocos.`;
-            }
+            document.getElementById('p-bar').style.width = progressPercent + '%';
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step-' + stepNum).classList.add('active');
         }
 
-        function triggerPayment() {
-            // Integração futura do Link de Checkout / API Pix Copia e Cola
-            alert('Redirecionando para o ambiente de pagamento seguro de R$ 5,99 da aplicação.');
+        function generateDiagnostic() {
+            payload.dream = document.getElementById('user-dream').value;
+            payload.leaks = parseInt(document.getElementById('user-leaks').value);
+            
+            // Cálculos reais de impacto emocional
+            const horasAno = payload.leaks * 365;
+            
+            document.getElementById('p-bar').style.width = '100%';
+            document.getElementById('diag-intro').innerText = `Análise gerada para o dispositivo vinculado ao número ${payload.phone}.`;
+            document.getElementById('val-year').innerText = `${horasAno} Horas`;
+            
+            document.getElementById('diag-impact').innerText = `Você está jogando fora o equivalente a quase 2 meses inteiros de vigília por ano. Esse tempo é exatamente o que está impedindo você de conseguir "${payload.dream}".`;
+
+            // Salva na memória local do navegador para futuras consultas automáticas
+            localStorage.setItem('timeleak_premium_user', JSON.stringify(payload));
+
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step-4').classList.add('active');
         }
 
-        // Registro Automático do Service Worker PWA
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(() => {});
-        }
+        function openPixModal() { document.getElementById('payment-modal').style.display = 'flex'; }
+        function closePixModal() { document.getElementById('payment-modal').style.display = 'none'; }
     </script>
 </body>
-  </html>
-                  
+    </html>
+    
